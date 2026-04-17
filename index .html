@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tidal Barrage Game</title>
+  <style>
+    :root {
+      --bg: #dff4ff;
+      --panel: #fff9f0;
+      --border: #2f3850;
+      --sky1: #d7f3ff;
+      --sky2: #8fd4ff;
+      --sand1: #efd9a2;
+      --sand2: #d9b36e;
+      --water1: #63c8ff;
+      --water2: #2d91df;
+      --foam: #effcff;
+      --wall1: #9aa6b6;
+      --wall2: #6e7784;
+      --gate1: #727c87;
+      --gate2: #4f5863;
+      --text: #243046;
+      --pink1: #ff9bc4;
+      --pink2: #ff6aa6;
+      --green1: #81e49f;
+      --green2: #35b960;
+      --blue1: #91d7ff;
+      --blue2: #4f9fff;
+      --gold1: #ffe58a;
+      --gold2: #ffab47;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Courier New", monospace;
+      padding: 10px;
+    }
+
+    .app {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 4px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 8px 0 rgba(0,0,0,0.12);
+      overflow: hidden;
+    }
+
+    .world-wrap { padding: 12px; }
+    .world {
+      position: relative;
+      width: 100%;
+      height: 470px;
+      overflow: hidden;
+      border: 4px solid var(--border);
+      border-radius: 8px;
+      background: linear-gradient(180deg, var(--sky1) 0%, var(--sky2) 55%, var(--sand1) 55%, var(--sand2) 100%);
+    }
+
+    .sun {
+      position: absolute;
+      right: 30px;
+      top: 25px;
+      width: 54px;
+      height: 54px;
+      background: #ffe67e;
+      box-shadow: 0 0 0 6px rgba(255,230,126,0.35), 0 0 0 12px rgba(255,230,126,0.16);
+      z-index: 1;
+    }
+
+    .cloud {
+      position: absolute;
+      width: 76px;
+      height: 18px;
+      background: #f6fdff;
+      box-shadow: 12px -8px 0 #f6fdff, 24px 0 0 #f6fdff, 36px -8px 0 #f6fdff, 48px 0 0 #f6fdff;
+      opacity: 0.9;
+      z-index: 1;
+    }
+    .cloud.c1 { left: 26px; top: 52px; }
+    .cloud.c2 { left: 210px; top: 40px; transform: scale(0.9); }
+
+    .label {
+      position: absolute;
+      top: 12px;
+      z-index: 8;
+      font-weight: bold;
+      font-size: 15px;
+      background: rgba(255,249,240,0.92);
+      border: 3px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 8px;
+    }
+    .label.left { left: 12px; }
+    .label.right { right: 12px; }
+
+    .water {
+      position: absolute;
+      bottom: 0;
+      width: 42%;
+      background: linear-gradient(180deg, var(--water1) 0%, var(--water2) 100%);
+      border-top: 4px solid var(--foam);
+      overflow: hidden;
+      transition: height 0.1s linear;
+      z-index: 2;
+    }
+    .water::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      height: 12px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.72) 0 8px, transparent 8px 16px, rgba(255,255,255,0.42) 16px 24px, transparent 24px 32px);
+      animation: foamMove 0.9s linear infinite;
+    }
+    .water::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(circle at 12px 14px, rgba(255,255,255,0.14) 0 2px, transparent 2px), radial-gradient(circle at 36px 34px, rgba(255,255,255,0.1) 0 2px, transparent 2px);
+      background-size: 68px 68px;
+      opacity: 0.6;
+    }
+    @keyframes foamMove { from { background-position-x: 0; } to { background-position-x: 32px; } }
+    #oceanWater { left: 0; }
+    #basinWater { right: 0; }
+
+    .plant {
+      position: absolute;
+      bottom: 0;
+      width: 10px;
+      background: #4bb86c;
+      box-shadow: 8px -8px 0 #80d594;
+      opacity: 0.75;
+      z-index: 3;
+    }
+    .plant.p1 { left: 80px; height: 46px; }
+    .plant.p2 { left: 280px; height: 34px; }
+    .plant.p3 { right: 90px; height: 54px; }
+    .plant.p4 { right: 240px; height: 38px; }
+
+    .barrage {
+      position: absolute;
+      left: 42%;
+      bottom: 0;
+      width: 16%;
+      height: 100%;
+      background: linear-gradient(180deg, var(--wall1) 0%, var(--wall2) 100%);
+      border-left: 4px solid #596270;
+      border-right: 4px solid #596270;
+      z-index: 5;
+    }
+    .barrage::before {
+      content: "";
+      position: absolute;
+      top: 120px;
+      left: 0;
+      width: 100%;
+      height: 10px;
+      background: #5b6470;
+    }
+
+    .gate-slot {
+      position: absolute;
+      left: 50%;
+      top: 180px;
+      transform: translateX(-50%);
+      width: 82px;
+      height: 180px;
+      border: 4px solid #d5deeb;
+      background: rgba(31,63,96,0.28);
+      overflow: hidden;
+    }
+    .gate-door {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, var(--gate1) 0%, var(--gate2) 100%);
+      z-index: 3;
+      transition: transform 0.14s steps(2);
+    }
+    .gate-door.open { transform: translateY(-74%); }
+
+    .flow {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      opacity: 0;
+      background: linear-gradient(180deg, #e7f9ff 0 8px, #7fd7ff 8px 16px, #e7f9ff 16px 24px, #7fd7ff 24px 32px);
+    }
+    .flow.active { opacity: 0.96; animation: flowDown 0.34s linear infinite; }
+    .flow.reverse.active { animation: flowUp 0.34s linear infinite; }
+    @keyframes flowDown { from { background-position-y: 0; } to { background-position-y: 32px; } }
+    @keyframes flowUp { from { background-position-y: 32px; } to { background-position-y: 0; } }
+
+    .turbine {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 58px;
+      height: 58px;
+      transform: translate(-50%, -50%);
+      z-index: 2;
+    }
+    .blade {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 14px;
+      height: 14px;
+      transform: translate(-50%, -50%);
+      background: #24354a;
+      box-shadow: 0 -18px 0 #24354a, 0 18px 0 #24354a, -18px 0 0 #24354a, 18px 0 0 #24354a;
+    }
+    .blade::before, .blade::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: #24354a;
+      transform: rotate(45deg);
+    }
+    .turbine.spin { animation: spin 0.72s steps(8) infinite; }
+    @keyframes spin { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+    .fish {
+      position: absolute;
+      width: 28px;
+      height: 16px;
+      z-index: 7;
+      transition: opacity 0.2s ease, filter 0.2s ease;
+    }
+    .fish .body {
+      position: absolute;
+      left: 8px;
+      top: 4px;
+      width: 12px;
+      height: 8px;
+      background: var(--pink1);
+      box-shadow: 4px 0 0 var(--pink1), 8px 0 0 var(--pink1), 0 -4px 0 #ffc0d7, 4px -4px 0 #ffc0d7, 0 4px 0 var(--pink2), 4px 4px 0 var(--pink2);
+    }
+    .fish .tail {
+      position: absolute;
+      left: 0;
+      top: 5px;
+      width: 0;
+      height: 0;
+      border-top: 4px solid transparent;
+      border-bottom: 4px solid transparent;
+      border-right: 8px solid var(--pink1);
+    }
+    .fish .eye {
+      position: absolute;
+      right: 3px;
+      top: 6px;
+      width: 3px;
+      height: 3px;
+      background: #1c2231;
+    }
+    .fish.warning { animation: wiggle 0.22s steps(2) infinite; filter: saturate(1.4) hue-rotate(-18deg); }
+    .fish.dead { opacity: 0.42; filter: grayscale(1); }
+    @keyframes wiggle { 0% { transform: translateY(0); } 50% { transform: translateY(-2px); } 100% { transform: translateY(0); } }
+
+    .money-box {
+      position: absolute;
+      left: 50%;
+      bottom: 14px;
+      transform: translateX(-50%);
+      min-width: 240px;
+      text-align: center;
+      padding: 10px 14px;
+      z-index: 8;
+      background: rgba(255,254,248,0.96);
+      border: 4px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 6px 0 rgba(0,0,0,0.12);
+      font-weight: bold;
+    }
+
+    .hud {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      padding: 0 12px 12px;
+    }
+    .hud-box {
+      min-height: 78px;
+      padding: 10px;
+      background: white;
+      border: 4px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 4px 0 rgba(0,0,0,0.1);
+    }
+    .hud-title {
+      margin-bottom: 6px;
+      font-size: 13px;
+      font-weight: bold;
+      color: #5c677a;
+      text-transform: uppercase;
+    }
+    .hud-value { font-size: 22px; font-weight: bold; }
+
+    .side {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .box { padding: 14px; }
+    .box h1 { margin: 0 0 8px; font-size: 28px; line-height: 1.1; }
+    .box p { margin: 0; font-size: 15px; line-height: 1.45; }
+
+    .meter { margin-bottom: 12px; }
+    .meter:last-child { margin-bottom: 0; }
+    .meter-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    .bar {
+      position: relative;
+      height: 18px;
+      overflow: hidden;
+      border: 3px solid var(--border);
+      border-radius: 6px;
+      background: #dbe5ef;
+    }
+    .fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      width: 0%;
+      transition: width 0.1s linear;
+      background: linear-gradient(90deg, var(--blue1) 0%, var(--blue2) 100%);
+    }
+    .fill.fish { background: linear-gradient(90deg, var(--green1) 0%, var(--green2) 100%); }
+    .fill.money { background: linear-gradient(90deg, var(--gold1) 0%, var(--gold2) 100%); }
+
+    .pixel-button {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 100%;
+      display: block;
+      min-height: 52px;
+      height: auto;
+      padding: 12px;
+      font-family: inherit;
+      font-size: 17px;
+      font-weight: bold;
+      line-height: 1.2;
+      border: 4px solid var(--border);
+      border-radius: 8px;
+      background: #8fe1a8;
+      box-shadow: 0 6px 0 rgba(0,0,0,0.12);
+      cursor: pointer;
+      white-space: normal;
+      word-break: break-word;
+      overflow: hidden;
+    }
+    .pixel-button.alt { background: #ffd98a; }
+    .pixel-button:disabled {
+      opacity: 1;
+      cursor: default;
+      background: #e7dcc2;
+      color: #6a6a6a;
+      box-shadow: none;
+    }
+
+    .tiny { font-size: 13px; color: #5a6477; line-height: 1.45; }
+    .instructions-box ul { margin: 8px 0 0 20px; padding: 0; line-height: 1.55; font-size: 15px; }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(30, 41, 60, 0.7);
+    }
+    .hidden { display: none !important; }
+    .modal {
+      width: min(560px, 100%);
+      padding: 22px;
+      text-align: center;
+      border: 4px solid var(--border);
+      border-radius: 10px;
+      background: var(--panel);
+      box-shadow: 0 10px 0 rgba(0,0,0,0.12);
+    }
+    .modal h2 { margin: 0 0 10px; font-size: 30px; }
+    .modal p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; }
+
+    .alert-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 25;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(24, 32, 49, 0.55);
+    }
+    .alert-overlay.show { display: flex; }
+    .alert-box {
+      width: min(520px, 100%);
+      padding: 18px;
+      border: 4px solid var(--border);
+      border-radius: 10px;
+      background: var(--panel);
+      box-shadow: 0 10px 0 rgba(0,0,0,0.12);
+      text-align: left;
+    }
+    .alert-box h3 { margin: 0 0 8px; font-size: 24px; }
+    .alert-box p { margin: 0 0 12px; font-size: 15px; line-height: 1.5; }
+    .key {
+      display: inline-block;
+      padding: 2px 8px;
+      border: 3px solid var(--border);
+      border-radius: 6px;
+      background: white;
+      font-weight: bold;
+    }
+
+    @media (max-width: 1080px) {
+      .app { grid-template-columns: 1fr; }
+      .world { height: 420px; }
+    }
+
+    @media (max-width: 760px) {
+      .world { height: 360px; }
+      .hud { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="card">
+      <div class="world-wrap">
+        <div class="world" id="world">
+          <div class="sun"></div>
+          <div class="cloud c1"></div>
+          <div class="cloud c2"></div>
+          <div class="label left">Ocean</div>
+          <div class="label right">Basin</div>
+
+          <div class="water" id="oceanWater"></div>
+          <div class="water" id="basinWater"></div>
+
+          <div class="plant p1"></div>
+          <div class="plant p2"></div>
+          <div class="plant p3"></div>
+          <div class="plant p4"></div>
+
+          <div class="barrage">
+            <div class="gate-slot">
+              <div class="flow" id="flowDown"></div>
+              <div class="flow reverse" id="flowUp"></div>
+              <div class="turbine" id="turbine"><div class="blade"></div></div>
+              <div class="gate-door" id="gateDoor"></div>
+            </div>
+          </div>
+
+          <div class="fish" id="fish0"><div class="tail"></div><div class="body"></div><div class="eye"></div></div>
+          <div class="fish" id="fish1"><div class="tail"></div><div class="body"></div><div class="eye"></div></div>
+          <div class="fish" id="fish2"><div class="tail"></div><div class="body"></div><div class="eye"></div></div>
+          <div class="fish" id="fish3"><div class="tail"></div><div class="body"></div><div class="eye"></div></div>
+          <div class="fish" id="fish4"><div class="tail"></div><div class="body"></div><div class="eye"></div></div>
+
+          <div class="money-box" id="bottomMoney">Available Money: £40 million</div>
+
+          <div class="overlay" id="startOverlay">
+            <div class="modal">
+              <h2>Tidal Pixel Barrage</h2>
+              <p>Open the gate when the ocean and basin water levels are different. That lets water move through the turbine and generate electricity.</p>
+              <p>Press <span class="key">SPACE</span> to open or close the gate. Keep it open too long and you will harm fish or damage the barrage.</p>
+              <button class="pixel-button" id="startBtn">Start Game</button>
+            </div>
+          </div>
+
+          <div class="overlay hidden" id="endOverlay">
+            <div class="modal">
+              <h2 id="endTitle">Nice work!</h2>
+              <p id="endText"></p>
+              <button class="pixel-button alt" id="restartBtn">Play Again</button>
+            </div>
+          </div>
+
+          <div class="alert-overlay" id="alertOverlay">
+            <div class="alert-box">
+              <h3 id="alertTitle">Alert</h3>
+              <p id="alertText"></p>
+              <button class="pixel-button alt" id="alertBtn">Got it</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hud">
+        <div class="hud-box"><div class="hud-title">Level</div><div class="hud-value" id="levelText">1 / 3</div></div>
+        <div class="hud-box"><div class="hud-title">Target Energy</div><div class="hud-value" id="targetText">70</div></div>
+        <div class="hud-box"><div class="hud-title">Gate Timer</div><div class="hud-value" id="timerText">0.0s</div></div>
+        <div class="hud-box"><div class="hud-title">Flow</div><div class="hud-value" id="flowText">OFF</div></div>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="card box">
+        <h1>Cute Tidal Energy Game</h1>
+        <p>Water level difference pushes water through a turbine in the barrage. That is the basic principle of tidal energy capture. The challenge is making electricity without damaging marine life or expensive infrastructure.</p>
+      </div>
+
+      <div class="card box">
+        <div class="meter">
+          <div class="meter-row"><span>Energy</span><span id="energyLabel">0 / 70</span></div>
+          <div class="bar"><div class="fill" id="energyFill"></div></div>
+        </div>
+        <div class="meter">
+          <div class="meter-row"><span>Fish Alive</span><span id="fishLabel">5 / 5</span></div>
+          <div class="bar"><div class="fill fish" id="fishFill"></div></div>
+        </div>
+        <div class="meter">
+          <div class="meter-row"><span>Money</span><span id="moneyLabel">£40m</span></div>
+          <div class="bar"><div class="fill money" id="moneyFill"></div></div>
+        </div>
+      </div>
+
+      <div class="card box">
+        <button class="pixel-button alt" id="repairBtn" disabled>Repair Barrage (£40m)</button>
+        <p class="tiny" style="margin:10px 0 0;">This button activates only after the barrage breaks. You only have enough money to repair it once.</p>
+      </div>
+
+      <div class="card box instructions-box">
+        <strong>Instruction Box</strong>
+        <ul>
+          <li>Press <strong>SPACE</strong> to open or close the gate.</li>
+          <li>Level 1 should take about a minute, then levels 2 and 3 get harder.</li>
+          <li>At <strong>5 seconds</strong> open: one fish dies and a knowledge box appears.</li>
+          <li>At <strong>10 seconds</strong> open: the barrage breaks and a cost box appears.</li>
+          <li>Finish 3 levels with targets 70, 100, and 130.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const levelTargets = [70, 100, 130];
+    const repairCost = 40;
+    const maxMoney = 40;
+    const dt = 0.1;
+    const energyBaseGain = 0.18;
+    const energyFlowBonus = 0.32;
+
+    const state = {
+      running: false,
+      gameOver: false,
+      pausedForAlert: false,
+      level: 0,
+      energy: 0,
+      money: 40,
+      gateOpen: false,
+      gateTimer: 0,
+      fishDeathsThisOpen: 0,
+      barrageBroken: false,
+      time: 0,
+      fish: []
+    };
+
+    const els = {
+      oceanWater: document.getElementById('oceanWater'),
+      basinWater: document.getElementById('basinWater'),
+      gateDoor: document.getElementById('gateDoor'),
+      turbine: document.getElementById('turbine'),
+      flowDown: document.getElementById('flowDown'),
+      flowUp: document.getElementById('flowUp'),
+      startOverlay: document.getElementById('startOverlay'),
+      endOverlay: document.getElementById('endOverlay'),
+      alertOverlay: document.getElementById('alertOverlay'),
+      startBtn: document.getElementById('startBtn'),
+      restartBtn: document.getElementById('restartBtn'),
+      repairBtn: document.getElementById('repairBtn'),
+      alertBtn: document.getElementById('alertBtn'),
+      alertTitle: document.getElementById('alertTitle'),
+      alertText: document.getElementById('alertText'),
+      endTitle: document.getElementById('endTitle'),
+      endText: document.getElementById('endText'),
+      levelText: document.getElementById('levelText'),
+      targetText: document.getElementById('targetText'),
+      timerText: document.getElementById('timerText'),
+      flowText: document.getElementById('flowText'),
+      energyLabel: document.getElementById('energyLabel'),
+      fishLabel: document.getElementById('fishLabel'),
+      moneyLabel: document.getElementById('moneyLabel'),
+      energyFill: document.getElementById('energyFill'),
+      fishFill: document.getElementById('fishFill'),
+      moneyFill: document.getElementById('moneyFill'),
+      bottomMoney: document.getElementById('bottomMoney')
+    };
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function currentTarget() {
+      return levelTargets[state.level];
+    }
+
+    function resetFish() {
+      state.fish = [
+        { x: 80, y: 315, speed: 0.7, alive: true },
+        { x: 180, y: 345, speed: 0.85, alive: true },
+        { x: 300, y: 305, speed: 0.58, alive: true },
+        { x: 560, y: 340, speed: -0.8, alive: true },
+        { x: 680, y: 320, speed: -0.68, alive: true }
+      ];
+      for (let i = 0; i < state.fish.length; i++) {
+        const el = document.getElementById(`fish${i}`);
+        el.classList.remove('dead', 'warning');
+      }
+    }
+
+    function aliveFishCount() {
+      return state.fish.filter(f => f.alive).length;
+    }
+
+    function getOceanLevel() {
+      return 170 + Math.sin(state.time / 18) * 80;
+    }
+
+    function getBasinLevel() {
+      return 160 + Math.sin((state.time - 8) / 18) * 58;
+    }
+
+    function showAlert(title, text) {
+      state.pausedForAlert = true;
+      els.alertTitle.textContent = title;
+      els.alertText.textContent = text;
+      els.alertOverlay.classList.add('show');
+    }
+
+    function hideAlert() {
+      state.pausedForAlert = false;
+      els.alertOverlay.classList.remove('show');
+    }
+
+    function killOneFish() {
+      const i = state.fish.findIndex(f => f.alive);
+      if (i !== -1) {
+        state.fish[i].alive = false;
+        document.getElementById(`fish${i}`).classList.add('dead');
+        showAlert(
+          'Fish Harm Alert',
+          'Tidal energy is renewable and predictable, but tidal barrages can affect marine life. Strong or poorly managed flow can disrupt fish movement, habitat, and migration routes.'
+        );
+      }
+    }
+
+    function breakBarrage() {
+      state.barrageBroken = true;
+      state.gateOpen = false;
+      showAlert(
+        'Barrage Damage Alert',
+        'Tidal barrage systems are expensive. This game uses a £40 million repair cost to represent a major repair, and you only have enough money to pay for one big repair.'
+      );
+    }
+
+    function repairBarrage() {
+      if (!state.barrageBroken) return;
+      if (state.money < repairCost) {
+        endGame('No money left for repairs.', 'The barrage broke, but you no longer had enough money to repair it.');
+        return;
+      }
+      state.money -= repairCost;
+      state.barrageBroken = false;
+      state.gateTimer = 0;
+      state.fishDeathsThisOpen = 0;
+      updateUI(0, false);
+      showAlert('Repair Complete', 'The barrage has been repaired, but your repair budget is now empty.');
+    }
+
+    function nextLevel() {
+      state.level += 1;
+      if (state.level >= levelTargets.length) {
+        endGame('You finished all 3 levels!', 'You captured tidal energy using water level difference across the barrage while seeing the trade-offs for marine life and infrastructure.');
+        return;
+      }
+      state.energy = 0;
+      state.gateOpen = false;
+      state.gateTimer = 0;
+      state.fishDeathsThisOpen = 0;
+      state.barrageBroken = false;
+      updateUI(0, false);
+      showAlert('Level Complete', `Nice. Level ${state.level + 1} begins now, and the energy goal is higher.`);
+    }
+
+    function endGame(title, text) {
+      state.running = false;
+      state.gameOver = true;
+      els.endTitle.textContent = title;
+      els.endText.textContent = text;
+      els.endOverlay.classList.remove('hidden');
+    }
+
+    function updateFish(activeFlow) {
+      state.fish.forEach((fish, i) => {
+        const el = document.getElementById(`fish${i}`);
+        if (!fish.alive) {
+          fish.y = Math.max(120, fish.y - 0.12);
+          el.style.left = `${fish.x}px`;
+          el.style.top = `${fish.y}px`;
+          el.style.transform = 'rotate(180deg)';
+          return;
+        }
+
+        fish.x += fish.speed;
+        if (fish.x < 12 || fish.x > 720) fish.speed *= -1;
+        if (fish.x > 304 && fish.x < 454) {
+          fish.speed *= -1;
+          fish.x += fish.speed * 8;
+        }
+
+        const swimY = fish.y + Math.sin((state.time + i * 10) / 7) * 3;
+        el.style.left = `${fish.x}px`;
+        el.style.top = `${swimY}px`;
+        el.style.transform = fish.speed < 0 ? 'scaleX(-1)' : 'scaleX(1)';
+        el.classList.toggle('warning', activeFlow && state.gateTimer >= 4 && state.gateTimer < 5);
+      });
+    }
+
+    function updateUI(diff = 0, activeFlow = false) {
+      els.levelText.textContent = `${state.level + 1} / 3`;
+      els.targetText.textContent = String(currentTarget());
+      els.timerText.textContent = `${state.gateTimer.toFixed(1)}s`;
+      els.flowText.textContent = state.barrageBroken ? 'BROKEN' : activeFlow ? 'ON' : 'OFF';
+      els.energyLabel.textContent = `${Math.floor(state.energy)} / ${currentTarget()}`;
+      els.fishLabel.textContent = `${aliveFishCount()} / ${state.fish.length}`;
+      els.moneyLabel.textContent = `£${state.money}m`;
+      els.bottomMoney.textContent = `Available Money: £${state.money} million`;
+
+      els.energyFill.style.width = `${clamp((state.energy / currentTarget()) * 100, 0, 100)}%`;
+      els.fishFill.style.width = `${(aliveFishCount() / state.fish.length) * 100}%`;
+      els.moneyFill.style.width = `${(state.money / maxMoney) * 100}%`;
+
+      els.gateDoor.classList.toggle('open', state.gateOpen && !state.barrageBroken);
+      els.turbine.classList.toggle('spin', activeFlow && !state.barrageBroken);
+      els.flowDown.classList.toggle('active', activeFlow && diff > 0 && !state.barrageBroken);
+      els.flowUp.classList.toggle('active', activeFlow && diff < 0 && !state.barrageBroken);
+      els.repairBtn.disabled = !state.barrageBroken;
+    }
+
+    function renderScene(activeFlow = false, diff = 0) {
+      const oceanLevel = getOceanLevel();
+      const basinLevel = getBasinLevel();
+      els.oceanWater.style.height = `${oceanLevel}px`;
+      els.basinWater.style.height = `${basinLevel}px`;
+      updateFish(activeFlow);
+      updateUI(diff, activeFlow);
+    }
+
+    function tick() {
+      if (!state.running || state.gameOver || state.pausedForAlert) return;
+
+      state.time += 1;
+      const oceanLevel = getOceanLevel();
+      const basinLevel = getBasinLevel();
+      const diff = oceanLevel - basinLevel;
+      const usableDifference = Math.abs(diff);
+      const activeFlow = state.gateOpen && !state.barrageBroken && usableDifference > 8;
+      const flowStrength = clamp((usableDifference - 8) / 90, 0, 1);
+
+      els.oceanWater.style.height = `${oceanLevel}px`;
+      els.basinWater.style.height = `${basinLevel}px`;
+
+      if (state.gateOpen && !state.barrageBroken) {
+        state.gateTimer += dt;
+      } else {
+        state.gateTimer = 0;
+        state.fishDeathsThisOpen = 0;
+      }
+
+      if (activeFlow) {
+        state.energy += energyBaseGain + flowStrength * energyFlowBonus;
+      }
+
+      if (state.gateTimer >= 5 && state.fishDeathsThisOpen < 1) {
+        state.fishDeathsThisOpen = 1;
+        killOneFish();
+      }
+
+      if (state.gateTimer >= 10 && !state.barrageBroken) {
+        breakBarrage();
+      }
+
+      updateFish(activeFlow);
+      updateUI(diff, activeFlow);
+
+      if (aliveFishCount() === 0) {
+        endGame('All fish died.', 'You generated clean energy, but the marine life did not survive how the barrage was used.');
+        return;
+      }
+
+      if (state.barrageBroken && state.money < repairCost) {
+        endGame('No money left for repairs.', 'The barrage broke and you had no repair budget remaining.');
+        return;
+      }
+
+      if (state.energy >= currentTarget()) {
+        nextLevel();
+      }
+    }
+
+    function resetGame() {
+      state.running = false;
+      state.gameOver = false;
+      state.pausedForAlert = false;
+      state.level = 0;
+      state.energy = 0;
+      state.money = 40;
+      state.gateOpen = false;
+      state.gateTimer = 0;
+      state.fishDeathsThisOpen = 0;
+      state.barrageBroken = false;
+      state.time = 0;
+      resetFish();
+      els.startOverlay.classList.remove('hidden');
+      els.endOverlay.classList.add('hidden');
+      els.alertOverlay.classList.remove('show');
+      renderScene(false, 0);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.code !== 'Space') return;
+      e.preventDefault();
+      if (!state.running || state.gameOver || state.pausedForAlert || state.barrageBroken) return;
+      state.gateOpen = !state.gateOpen;
+      updateUI(0, false);
+    });
+
+    els.startBtn.addEventListener('click', () => {
+      els.startOverlay.classList.add('hidden');
+      state.running = true;
+      renderScene(false, 0);
+    });
+
+    els.restartBtn.addEventListener('click', resetGame);
+    els.alertBtn.addEventListener('click', hideAlert);
+    els.repairBtn.addEventListener('click', repairBarrage);
+
+    resetGame();
+    setInterval(tick, 100);
+  </script>
+</body>
+</html>
